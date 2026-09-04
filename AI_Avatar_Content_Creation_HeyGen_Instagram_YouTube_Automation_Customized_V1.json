@@ -1,0 +1,689 @@
+{
+  "name": "AI Avatar Content Creation & Instagram + YouTube Publishing Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "AI Avatar Content Publisher",
+        "formDescription": "Submit a topic and schedule. AI writes the script, HeyGen creates the avatar video, and the result is prepared for Instagram and YouTube.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Category",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "AI & Automation"
+                  },
+                  {
+                    "option": "Business Tips"
+                  },
+                  {
+                    "option": "Tech News"
+                  },
+                  {
+                    "option": "Motivation"
+                  },
+                  {
+                    "option": "Education"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Title",
+              "placeholder": "e.g. Top 5 AI Tools for 2025",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Post Time",
+              "fieldType": "datetime",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3ddf0199-16b1-4e07-a918-5c2b13b63e2b",
+      "name": "Trigger • Content Submission Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -2720,
+        400
+      ],
+      "webhookId": "534a4fe9-ab4b-4ecb-bff9-29a29ec34cbb"
+    },
+    {
+      "parameters": {
+        "jsCode": "const formData = $input.first().json;\nconst category = formData['Category'] || 'Education';\nconst title = formData['Title'] || '';\nconst postTime = formData['Post Time'] || '';\nconst toneMap = {\n  'AI & Automation': 'educational, practical, futuristic',\n  'Business Tips': 'professional, actionable, clear',\n  'Tech News': 'informative, crisp, current',\n  'Motivation': 'energetic, uplifting, inspiring',\n  'Education': 'simple, structured, approachable'\n};\nconst tone = toneMap[category] || 'engaging, informative';\nconst language = $env.CONTENT_LANGUAGE || 'Hinglish';\n\nreturn [{\n  json: {\n    category, title, postTime, tone, language,\n    promptInstruction: `You are an expert short-form content writer for the ${category} niche.\n\nWrite a natural AI-avatar video script.\n\nTitle: \"${title}\"\nCategory: ${category}\nTone: ${tone}\nLanguage: ${language}\n\nRequirements:\n- 45–60 seconds spoken duration, roughly 120–150 words.\n- Strong hook in the first 5 seconds.\n- One clear and useful idea.\n- Conversational language suitable for an AI avatar.\n- End with a concise CTA.\n- No stage directions or camera instructions.\n- Do not invent statistics, prices, product features, news or unsupported claims.\n- Return only the spoken script.`\n  }\n}];"
+      },
+      "id": "ca504082-a2ad-4a0b-9bc2-d3ba071ea1f4",
+      "name": "Logic • Prepare Content Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2496,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": {{ JSON.stringify($json.promptInstruction) }}\n    }]\n  }],\n  \"generationConfig\": {\n    \"temperature\": 0.7,\n    \"maxOutputTokens\": 1000\n  }\n}",
+        "options": {}
+      },
+      "id": "e144d9b8-42c8-4b57-8c91-73449b793b94",
+      "name": "AI • Generate Video Script",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2288,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst script = response.candidates?.[0]?.content?.parts?.[0]?.text || '';\n\nconst prevData = $('Logic • Prepare Content Data').first().json;\n\nif (!script) {\n  throw new Error('Gemini se script nahi mili! Response: ' + JSON.stringify(response));\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    script: script.trim()\n  }\n}];"
+      },
+      "id": "6db51632-e96c-4596-935e-6e78d0e4b4e7",
+      "name": "Logic • Extract Generated Script",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2064,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.heygen.com/v2/video/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $env.HEYGEN_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"video_inputs\": [{\n    \"character\": {\n      \"type\": \"avatar\",\n      \"avatar_id\": \"{{ $env.HEYGEN_AVATAR_ID }}\",\n      \"avatar_style\": \"normal\"\n    },\n    \"voice\": {\n      \"type\": \"text\",\n      \"input_text\": {{ JSON.stringify($json.script) }},\n      \"voice_id\": \"{{ $env.HEYGEN_VOICE_ID }}\",\n      \"speed\": {{ $env.HEYGEN_VOICE_SPEED || 1.0 }}\n    },\n    \"background\": {\n      \"type\": \"color\",\n      \"value\": \"{{ $env.HEYGEN_BACKGROUND_COLOR || '#0f0f1a' }}\"\n    }\n  }],\n  \"dimension\": {\n    \"width\": 1080,\n    \"height\": 1920\n  },\n  \"aspect_ratio\": \"9:16\",\n  \"test\": false\n}",
+        "options": {}
+      },
+      "id": "495c7c2d-12d1-4447-8379-bdf8fd24a544",
+      "name": "HeyGen • Create Avatar Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1840,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst videoId = response.data?.video_id || response.video_id;\n\nif (!videoId) {\n  throw new Error('HeyGen video_id nahi mila! Response: ' + JSON.stringify(response));\n}\n\nconst prevData = $('Logic • Extract Generated Script').first().json;\n\nreturn [{\n  json: {\n    ...prevData,\n    heygenVideoId: videoId,\n    heygenStatus: 'processing'\n  }\n}];"
+      },
+      "id": "e239a68f-1781-4f8a-9721-0e60f1851781",
+      "name": "Logic • Save HeyGen Video ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1616,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 60
+      },
+      "id": "d2cc5b90-bd1d-4d80-91fc-0a75386cb443",
+      "name": "HeyGen • Wait for Processing",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1408,
+        400
+      ],
+      "webhookId": "wait-heygen-001"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.heygen.com/v1/video_status.get?video_id={{ $('Logic • Save HeyGen Video ID').first().json.heygenVideoId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "={{ $env.HEYGEN_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1027aee-461b-4dba-a2e0-5090df99ff94",
+      "name": "HeyGen • Check Video Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1184,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.data?.status }}",
+              "rightValue": "completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "88af9bf5-47d2-4b42-b3f0-6f464120227f",
+      "name": "Routing • Video Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -960,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "a29aecdb-4bc2-4c10-bc1f-b7715fbaabff",
+      "name": "HeyGen • Retry Status Check",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -960,
+        624
+      ],
+      "webhookId": "wait-heygen-retry"
+    },
+    {
+      "parameters": {
+        "jsCode": "const statusResponse = $input.first().json;\nconst videoUrl = statusResponse.data?.video_url || statusResponse.video_url;\nconst thumbnailUrl = statusResponse.data?.thumbnail_url || '';\n\nconst prevData = $('Logic • Save HeyGen Video ID').first().json;\n\nif (!videoUrl) {\n  throw new Error('Video URL nahi mila: ' + JSON.stringify(statusResponse));\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    videoUrl,\n    thumbnailUrl,\n    heygenStatus: 'completed'\n  }\n}];"
+      },
+      "id": "932d824c-e22f-48b7-906d-445ee85e7de3",
+      "name": "Logic • Extract Final Video URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": {{ JSON.stringify(\n`Create social copy for this short-form avatar video.\n\nTitle: ${$json.title}\nCategory: ${$json.category}\nScript Preview: ${$json.script.substring(0, 300)}\n\nGenerate:\n---INSTAGRAM---\nEngaging caption, 120–180 words, ${$env.CONTENT_LANGUAGE || 'Hinglish'}, relevant hashtags and a clear CTA.\n---YOUTUBE---\nProfessional Shorts description, 80–120 words, with relevant hashtags.\n\nDo not invent statistics, prices, product features, news or unsupported claims.\nReturn exactly the two sections shown above.`) }}\n    }]\n  }],\n  \"generationConfig\": {\n    \"temperature\": 0.7,\n    \"maxOutputTokens\": 800\n  }\n}",
+        "options": {}
+      },
+      "id": "09893d9e-7a72-44d8-b120-df38f09afcfa",
+      "name": "AI • Generate Social Captions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -528,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst fullText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';\n\nconst instagramMatch = fullText.match(/---INSTAGRAM---([\\s\\S]*?)---YOUTUBE---/);\nconst youtubeMatch = fullText.match(/---YOUTUBE---([\\s\\S]*)$/);\n\nconst instagramCaption = instagramMatch ? instagramMatch[1].trim() : fullText.substring(0, 500);\nconst youtubeDescription = youtubeMatch ? youtubeMatch[1].trim() : fullText.substring(500);\n\nconst prevData = $('Logic • Extract Final Video URL').first().json;\n\nreturn [{\n  json: {\n    ...prevData,\n    instagramCaption,\n    youtubeDescription\n  }\n}];"
+      },
+      "id": "280f349a-bedb-4f38-957f-0eb8bd88885b",
+      "name": "Logic • Parse Social Captions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.INSTAGRAM_ACCOUNT_ID }}/media",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "REELS"
+            },
+            {
+              "name": "video_url",
+              "value": "={{ $json.videoUrl }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.instagramCaption }}"
+            },
+            {
+              "name": "share_to_feed",
+              "value": "true"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "34016b91-ed31-4408-a08a-9588a0d7a7a8",
+      "name": "Instagram • Create Reel Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -80,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "96e196de-e057-448b-9851-a0a6da48a822",
+      "name": "Instagram • Wait for Container",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        256
+      ],
+      "webhookId": "wait-insta-001"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.INSTAGRAM_ACCOUNT_ID }}/media_publish",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "34be34df-8070-46b4-9d21-9fab8aa9bb3f",
+      "name": "Instagram • Publish Reel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        368,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status&uploadType=multipart",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.YOUTUBE_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"snippet\": {\n    \"title\": {{ JSON.stringify($('Logic • Parse Social Captions').first().json.title) }},\n    \"description\": {{ JSON.stringify($('Logic • Parse Social Captions').first().json.youtubeDescription) }},\n    \"categoryId\": \"{{ $env.YOUTUBE_CATEGORY_ID || '28' }}\",\n    \"tags\": [\"Shorts\", \"AI\", \"Automation\", {{ JSON.stringify($('Logic • Parse Social Captions').first().json.category) }}]\n  },\n  \"status\": {\n    \"privacyStatus\": \"{{ $env.YOUTUBE_PRIVACY_STATUS || 'private' }}\",\n    \"selfDeclaredMadeForKids\": false\n  }\n}",
+        "options": {}
+      },
+      "id": "af6013c4-b03c-43d5-8d20-bfaf4d319e55",
+      "name": "YouTube • Publish Short",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -80,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "options": {}
+      },
+      "id": "86514ce8-37e9-4319-9148-68917e0cf368",
+      "name": "Logic • Merge Publishing Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        592,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst summary = {\n  status: '✅ AutoGrow Pipeline Complete!',\n  timestamp: new Date().toISOString(),\n  message: 'Instagram Reel + YouTube Shorts dono publish ho gaye!'\n};\n\nconsole.log('🎉 Done!', JSON.stringify(summary));\n\nreturn [{ json: summary }];"
+      },
+      "id": "b262c676-703e-4aa1-8689-fa3cc706be59",
+      "name": "System • Pipeline Complete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "content": "# BUYER SETUP GUIDE\n\n## Required services\n- n8n\n- Google Gemini API\n- HeyGen API\n- Meta / Instagram Graph API\n- YouTube Data API\n\n## Environment variables\n- `GEMINI_API_KEY`\n- `CONTENT_LANGUAGE`\n- `HEYGEN_API_KEY`\n- `HEYGEN_AVATAR_ID`\n- `HEYGEN_VOICE_ID`\n- `HEYGEN_VOICE_SPEED`\n- `HEYGEN_BACKGROUND_COLOR`\n- `INSTAGRAM_ACCOUNT_ID`\n- `INSTAGRAM_ACCESS_TOKEN`\n- `YOUTUBE_ACCESS_TOKEN`\n- `YOUTUBE_CATEGORY_ID`\n- `YOUTUBE_PRIVACY_STATUS`\n\n## Setup order\n1. Add buyer-owned credentials.\n2. Configure the HeyGen avatar and voice.\n3. Configure Instagram API access.\n4. Configure YouTube API access.\n5. Submit one test topic through the form.\n6. Verify generated script.\n7. Verify HeyGen video.\n8. Test Instagram publishing.\n9. Test YouTube publishing.\n10. Activate only after end-to-end testing.\n\nWorkflow is inactive by default.",
+        "height": 620,
+        "width": 650,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        620,
+        -520
+      ],
+      "id": "7ec1eb79-d5a2-4daf-958a-989fc8f8c480",
+      "name": "NOTES • Buyer Setup Guide"
+    },
+    {
+      "parameters": {
+        "content": "# PRODUCTION SAFETY & LIMITATIONS\n\n### AI output\nReview scripts and captions for factual accuracy, brand safety and sensitive topics.\n\n### HeyGen processing\nVideo creation is asynchronous. The workflow waits and retries the status check before continuing.\n\n### Social platform permissions\nInstagram and YouTube require correctly configured accounts and API permissions. Availability can vary by account/setup.\n\n### Publishing\nStart with controlled/test publishing. YouTube defaults to a private status through the configurable variable until the buyer changes it.\n\n### Identity\nDo not use a real person's avatar or voice without appropriate authorization.\n\n### Credentials\nNever ship or reuse source credentials. Use buyer-owned credentials and environment variables.",
+        "height": 620,
+        "width": 650,
+        "color": 1
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        -520
+      ],
+      "id": "2a35e066-cfa4-48d5-927c-21c2f7a31389",
+      "name": "NOTES • Production Safety & Limits"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger • Content Submission Form": {
+      "main": [
+        [
+          {
+            "node": "Logic • Prepare Content Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic • Prepare Content Data": {
+      "main": [
+        [
+          {
+            "node": "AI • Generate Video Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Generate Video Script": {
+      "main": [
+        [
+          {
+            "node": "Logic • Extract Generated Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic • Extract Generated Script": {
+      "main": [
+        [
+          {
+            "node": "HeyGen • Create Avatar Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HeyGen • Create Avatar Video": {
+      "main": [
+        [
+          {
+            "node": "Logic • Save HeyGen Video ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic • Save HeyGen Video ID": {
+      "main": [
+        [
+          {
+            "node": "HeyGen • Wait for Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HeyGen • Wait for Processing": {
+      "main": [
+        [
+          {
+            "node": "HeyGen • Check Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HeyGen • Check Video Status": {
+      "main": [
+        [
+          {
+            "node": "Routing • Video Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Routing • Video Ready?": {
+      "main": [
+        [
+          {
+            "node": "Logic • Extract Final Video URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HeyGen • Retry Status Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HeyGen • Retry Status Check": {
+      "main": [
+        [
+          {
+            "node": "HeyGen • Check Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic • Extract Final Video URL": {
+      "main": [
+        [
+          {
+            "node": "AI • Generate Social Captions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Generate Social Captions": {
+      "main": [
+        [
+          {
+            "node": "Logic • Parse Social Captions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic • Parse Social Captions": {
+      "main": [
+        [
+          {
+            "node": "Instagram • Create Reel Container",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "YouTube • Publish Short",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram • Create Reel Container": {
+      "main": [
+        [
+          {
+            "node": "Instagram • Wait for Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram • Wait for Container": {
+      "main": [
+        [
+          {
+            "node": "Instagram • Publish Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram • Publish Reel": {
+      "main": [
+        [
+          {
+            "node": "Logic • Merge Publishing Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube • Publish Short": {
+      "main": [
+        [
+          {
+            "node": "Logic • Merge Publishing Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Logic • Merge Publishing Results": {
+      "main": [
+        [
+          {
+            "node": "System • Pipeline Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "efed5345-582c-48b1-9e82-ff6943fe8698",
+  "nodeGroups": [],
+  "id": "tWSyM3m1IXDmdmdv",
+  "tags": []
+}
