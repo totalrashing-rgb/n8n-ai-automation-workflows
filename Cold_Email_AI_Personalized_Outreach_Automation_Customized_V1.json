@@ -1,0 +1,344 @@
+{
+  "name": "AI Cold Email Lead Personalization & Outreach Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1408,
+        -592
+      ],
+      "id": "92d14e95-2e5a-4fb7-86e8-bba5e97544cc",
+      "name": "Trigger • Cold Email Schedule"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.COLD_EMAIL_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $env.COLD_EMAIL_SHEET_NAME || 'Data' }}",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1616,
+        -592
+      ],
+      "id": "f8b0928d-0b68-4756-9553-8662907964be",
+      "name": "Data • Get Pending Leads"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.Website }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1824,
+        -592
+      ],
+      "id": "c7e89826-cdd3-402c-87ce-b9ae226f3683",
+      "name": "Research • Fetch Company Website"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert B2B sales development representative specializing in personalized cold outreach.\n\nYour task is to write a concise, research-backed cold email for the lead below.\n\nLead Information:\nName: {{ $('Data • Get Pending Leads').item.json.Name }}\nJob Title: {{ $('Data • Get Pending Leads').item.json['Job Title'] }}\nCompany: {{ $('Data • Get Pending Leads').item.json.Company }}\nIndustry: {{ $('Data • Get Pending Leads').item.json.Industry }}\nWebsite: {{ $('Data • Get Pending Leads').item.json.Website }}\n\nWebsite Content:\n{{ $json.data }}\n\nCampaign Configuration:\nOffer: {{ $env.COLD_EMAIL_OFFER || 'AI automation and workflow automation services' }}\nPrimary Outcome: {{ $env.COLD_EMAIL_OUTCOME || 'reducing repetitive manual work and improving operational efficiency' }}\nSender Name: {{ $env.COLD_EMAIL_SENDER_NAME || 'Automation Consultant' }}\nSender Title: {{ $env.COLD_EMAIL_SENDER_TITLE || 'AI & Automation Consultant' }}\n\nInstructions:\n1. Analyze the website content and identify what the company actually does.\n2. Mention ONE concrete, verifiable observation from the website. Do not invent facts.\n3. Connect the observation naturally to the offer and likely business outcome.\n4. Personalize for the contact's role when the available job title provides a useful angle.\n5. Keep the message conversational, professional, and human.\n6. Do not use hype, fake urgency, fake familiarity, or unsupported claims.\n7. Do not invent pricing, clients, case studies, metrics, partnerships, product capabilities, or results.\n8. Keep the email between 90 and 130 words.\n9. Do not use emojis.\n10. Avoid excessive punctuation, generic compliments, and obvious AI phrases.\n11. End with a soft CTA for a brief conversation.\n12. Return ONLY the complete email body, including greeting and signature.\n13. Use the lead's first name in the greeting.\n\nSignature:\nBest regards,\n{{ $env.COLD_EMAIL_SENDER_NAME || 'Automation Consultant' }}\n{{ $env.COLD_EMAIL_SENDER_TITLE || 'AI & Automation Consultant' }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2032,
+        -592
+      ],
+      "id": "e4b2b4f9-ac98-46d3-aeba-61a5e6122e4d",
+      "name": "AI • Personalize Cold Email"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $env.COLD_EMAIL_OPENAI_MODEL || 'gpt-5-mini' }}"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2032,
+        -448
+      ],
+      "id": "324aba70-255f-4571-8d0f-00f71e6e8872",
+      "name": "AI • OpenAI Writing Model",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "sendTo": "= {{ $('Data • Get Pending Leads').item.json.Email }}",
+        "subject": "= {{ $env.COLD_EMAIL_SUBJECT_PREFIX || 'Quick idea for' }} {{ $('Data • Get Pending Leads').item.json.Company }}",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2384,
+        -592
+      ],
+      "id": "cba9cd92-c4fa-43c6-b5e4-76da22001e63",
+      "name": "Gmail • Send Personalized Email",
+      "webhookId": "60135cd5-dfa7-4a27-938b-14b806e9b142"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.COLD_EMAIL_SHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $env.COLD_EMAIL_SHEET_NAME || 'Data' }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Data • Get Pending Leads').item.json.Email }}",
+            "Status": "Sent"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Industry",
+              "displayName": "Industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {},
+        "matchingColumns": [
+          "Email"
+        ]
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2592,
+        -592
+      ],
+      "id": "3f4ffb31-63f6-427e-9370-98f238b44b53",
+      "name": "Data • Mark Lead as Sent"
+    },
+    {
+      "parameters": {
+        "content": "## AI Cold Email Lead Personalization & Outreach Automation\n\n### Required setup\n1. Connect a buyer-owned **Google Sheets** credential.\n2. Connect a buyer-owned **OpenAI** credential.\n3. Connect a buyer-owned **Gmail** credential.\n4. Set the environment variables below in n8n.\n\n### Environment variables\n- `COLD_EMAIL_SHEET_ID` — Google Spreadsheet ID\n- `COLD_EMAIL_SHEET_NAME` — Sheet/tab name (default: `Data`)\n- `COLD_EMAIL_OPENAI_MODEL` — model name (default: `gpt-5-mini`)\n- `COLD_EMAIL_OFFER` — service/offer to promote\n- `COLD_EMAIL_OUTCOME` — primary business outcome\n- `COLD_EMAIL_SENDER_NAME` — sender name\n- `COLD_EMAIL_SENDER_TITLE` — sender title\n- `COLD_EMAIL_SUBJECT_PREFIX` — email subject prefix (default: `Quick idea for`)\n\n### Google Sheet columns\n- `Name`\n- `Job Title`\n- `Company`\n- `Industry`\n- `Website`\n- `Email`\n- `Status`\n\n### Status workflow\nUse a status value that represents leads ready to be contacted. After a successful send, the workflow writes `Sent`.\n\n### Before activation\nRun a manual test with 1–2 leads and verify:\n- website is reachable\n- email personalization is accurate\n- Gmail sends from the correct account\n- the lead row updates to `Sent`\n- n8n timezone/schedule is correct\n\nWorkflow is intentionally **inactive** for buyer testing.",
+        "height": 520,
+        "width": 560,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        -320
+      ],
+      "id": "926beaea-4c4f-434a-865d-6188e5057c1b",
+      "name": "NOTES • Buyer Setup Guide"
+    },
+    {
+      "parameters": {
+        "content": "## Customization & Outreach Rules\n\n### Best buyer use cases\n- B2B lead generation\n- agency outbound\n- automation/AI consulting\n- SaaS prospecting\n- service-business outreach\n\n### Personalization\nEdit the AI prompt to match the buyer's:\n- niche\n- target customer\n- offer\n- primary pain point\n- tone of voice\n- CTA style\n\nThe AI should only use claims supported by the lead data or website content. Avoid invented facts, fake social proof, fake case studies, and unsupported performance claims.\n\n### Outreach safeguards\nUse this automation only for legitimate, permission-appropriate business outreach and follow applicable email/privacy/marketing rules in the target market. Maintain suppression/do-not-contact handling outside or inside the lead source as needed.\n\n### Important\nThis workflow sends real emails. Keep it inactive until credentials, copy, data quality, sender identity, and compliance requirements have been reviewed by the buyer.\n\nThe system is designed for personalized one-to-one style outreach, not bulk blasting.",
+        "height": 520,
+        "width": 560,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        -320
+      ],
+      "id": "53c8e323-b1a1-4943-8754-2973292882a3",
+      "name": "NOTES • Personalization & Outreach Safety"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger • Cold Email Schedule": {
+      "main": [
+        [
+          {
+            "node": "Data • Get Pending Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data • Get Pending Leads": {
+      "main": [
+        [
+          {
+            "node": "Research • Fetch Company Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research • Fetch Company Website": {
+      "main": [
+        [
+          {
+            "node": "AI • Personalize Cold Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • OpenAI Writing Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI • Personalize Cold Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Personalize Cold Email": {
+      "main": [
+        [
+          {
+            "node": "Gmail • Send Personalized Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail • Send Personalized Email": {
+      "main": [
+        [
+          {
+            "node": "Data • Mark Lead as Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "64e604cc-191a-4435-92e9-6d78583b3510",
+  "nodeGroups": [],
+  "id": "tWSyM3m1IXDmdmdv",
+  "tags": []
+}
