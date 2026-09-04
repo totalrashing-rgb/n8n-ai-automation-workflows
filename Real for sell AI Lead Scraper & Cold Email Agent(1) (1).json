@@ -1,0 +1,1301 @@
+{
+  "name": "AI Lead Scraper & Cold Email Agent - Client Safe v3",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.website }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              },
+              "id": "9f9c4c63-0774-4efc-be85-aec2b31ac2fb"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b57f1537-48dd-43c4-b509-c1a149f918b6",
+      "name": "Website Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6704,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "b369533f-44f6-4f12-9524-ba765d1a53f0",
+      "name": "Lead Search Request",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        3760,
+        1120
+      ],
+      "webhookId": "08e8bff2-271a-48ae-b416-819c3c1d7b83",
+      "credentials": {
+        "telegramApi": {
+          "id": "aPDxTO8YZx9rwHV3",
+          "name": "Lead gen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2",
+              "name": "search",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "chatId",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "457d0c94-c0c6-46cc-adf1-55c59963a949",
+      "name": "Extract Business Search",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3984,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=🔎 Lead search started.\n\nSearch: {{ $json.search }}\n\nI’m collecting leads, checking duplicates, finding emails and validating them.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "4b302cd8-3734-40cf-b0a4-41297bd91279",
+      "name": "Processing Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4208,
+        1120
+      ],
+      "webhookId": "4f400952-0b78-4fea-81d4-07f4adb0ab28",
+      "credentials": {
+        "telegramApi": {
+          "id": "aPDxTO8YZx9rwHV3",
+          "name": "Lead gen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://serpapi.com/search.json?engine=google_maps&q={{ encodeURIComponent($('Extract Business Search').first().json.search) }}&api_key=f9a072229ba54f2596db94ca0f8046d50094ecbe5de33727170bc828c3493528",
+        "options": {}
+      },
+      "id": "a5c8afec-8cb6-4cdf-922b-7ba71d55d784",
+      "name": "Google Maps Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4432,
+        1120
+      ],
+      "notesInFlow": true,
+      "notes": "Replace YOUR_SERPAPI_KEY with the client's SerpAPI key."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "local_results",
+        "options": {}
+      },
+      "id": "cc2c673d-1c5d-46ee-aa5a-0da87c73257c",
+      "name": "Split Business Results",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        4640,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const j = $json;\nconst name = String(j.title || '').trim();\nconst website = String(j.website || '').trim().replace(/\\/$/, '');\nconst address = String(j.address || '').trim();\nconst chatId = $('Extract Business Search').first().json.chatId || '';\nconst keyBase = website || address;\nconst key = `${name.toLowerCase().replace(/[^a-z0-9]+/g,'-')}:${keyBase.toLowerCase()}`;\nreturn {\n  json: {\n    ...j,\n    normalizedName: name,\n    normalizedWebsite: website,\n    leadKey: key,\n    chatId\n  }\n};"
+      },
+      "id": "84bb7535-c111-49bd-8e0d-d5b8779f0a0c",
+      "name": "Clean & Normalize Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4864,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1bkeye39cS3_rnKagXI7vlZcQVJG-nFs5GFyyKMftA5Y",
+          "mode": "list",
+          "cachedResultName": "Lead CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bkeye39cS3_rnKagXI7vlZcQVJG-nFs5GFyyKMftA5Y/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bkeye39cS3_rnKagXI7vlZcQVJG-nFs5GFyyKMftA5Y/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "230cbc1d-d66e-431a-88a0-859ac9e187fb",
+      "name": "Load Existing Leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5072,
+        1120
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "notesInFlow": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "F4pAJLnNt0Y2dWYV",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Reads the CRM once per search so duplicate checking does not drop unmatched leads."
+    },
+    {
+      "parameters": {
+        "jsCode": "const leads = $('Clean & Normalize Lead').all().map(i => i.json);\nconst existing = $input.all().map(i => i.json);\n\nconst existingKeys = new Set(\n  existing\n    .map(r => String(r['Lead Key'] || '').trim())\n    .filter(Boolean)\n);\n\nconst seen = new Set();\n\nreturn leads.map((lead) => {\n  const key = String(lead.leadKey || '').trim();\n  const alreadyInCRM = existingKeys.has(key);\n  const repeatedInSearch = seen.has(key);\n\n  const isDuplicate = alreadyInCRM || repeatedInSearch;\n\n  if (key) seen.add(key);\n\n  return {\n    json: {\n      ...lead,\n      isDuplicate,\n      duplicateReason: alreadyInCRM\n        ? 'Already exists in CRM'\n        : repeatedInSearch\n          ? 'Duplicate inside current search'\n          : ''\n    }\n  };\n});"
+      },
+      "id": "a254f5aa-ec1e-4776-969f-e6a3e02e643e",
+      "name": "Check Duplicates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5312,
+        1120
+      ],
+      "notesInFlow": true,
+      "notes": "Compares every scraped lead against the CRM and against duplicates in the current search."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isDuplicate }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "d442272a-0f28-4cac-8d53-d24cba420e24"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c395afef-79c1-46d6-8887-e70ebd4b6de5",
+      "name": "Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5536,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f19462e6-9928-4cc2-86e9-aa1b41495f1c",
+      "name": "Process Leads One-by-One",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        6304,
+        1136
+      ],
+      "notesInFlow": true,
+      "notes": "Processes exactly one lead at a time so LLM requests are never sent concurrently."
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "66c36b7d-5f8b-438e-b075-a3025f73d09b",
+      "name": "Wait Before Analysis",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4944,
+        1456
+      ],
+      "webhookId": "d98afa77-1bde-4643-a813-f3aa142efb59",
+      "notesInFlow": true,
+      "notes": "Spaces LLM requests by 3 seconds."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "20a87e3f-a2aa-46bc-8389-e7498fdb34a4",
+              "name": "client_company",
+              "value": "AJK Producation",
+              "type": "string"
+            },
+            {
+              "id": "a40d2fbc-6995-4967-91f9-9c4da8c7b85a",
+              "name": "client_founder",
+              "value": "Abhishek jatav",
+              "type": "string"
+            },
+            {
+              "id": "abaf8492-407d-47fd-a61a-186f7b34291e",
+              "name": "client_title",
+              "value": "Founder",
+              "type": "string"
+            },
+            {
+              "id": "4def7083-98fc-4d34-bb2e-2d4df3bfa216",
+              "name": "client_signature",
+              "value": "Best Regards, Abhishek Jatav Founder AJK Production",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "5d58b79c-d185-4779-9247-831caa2cc1e4",
+      "name": "Client Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        5808,
+        1328
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1bkeye39cS3_rnKagXI7vlZcQVJG-nFs5GFyyKMftA5Y",
+          "mode": "list",
+          "cachedResultName": "Lead CRM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bkeye39cS3_rnKagXI7vlZcQVJG-nFs5GFyyKMftA5Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1bkeye39cS3_rnKagXI7vlZcQVJG-nFs5GFyyKMftA5Y/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Business name": "={{ $('Build Contact Candidates').item.json.title }}",
+            "Rating": "={{ $('Build Contact Candidates').item.json.rating }}",
+            "Reviews": "={{ $('Build Contact Candidates').item.json.reviews }}",
+            "Address": "={{ $('Build Contact Candidates').item.json.address }}",
+            "Website": "={{ $('Build Contact Candidates').item.json.website }}",
+            "Lead Key": "={{ $('Build Contact Candidates').item.json.leadKey }}",
+            "Email Address": "={{ $('Email Validation').item.json.primaryEmail }}",
+            "Category": "={{ $('Build Contact Candidates').item.json.type }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Business name",
+              "displayName": "Business name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Rating",
+              "displayName": "Rating",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reviews",
+              "displayName": "Reviews",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Address",
+              "displayName": "Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Key",
+              "displayName": "Lead Key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3e53a29c-258f-47fd-afba-58742aa48376",
+      "name": "Save Lead CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4688,
+        1472
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "F4pAJLnNt0Y2dWYV",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Append the current validated lead. Uses current item fields; never .first()."
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a B2B lead qualification specialist.\n\nAnalyze the business using ONLY the information provided below.\n\nIMPORTANT RULES:\n- Do NOT invent facts.\n- Do NOT assume the business has a specific problem unless the supplied data supports it.\n- Do NOT claim that the business is losing customers, missing leads, missing appointments, etc. unless there is evidence.\n- Do NOT invent services offered by the business.\n- If there is not enough evidence for a specific opportunity, say \"Insufficient evidence\".\n- Recommend an AI automation service only when there is a reasonable connection to the available information.\n\nLEAD SCORING RULES:\n\nYou MUST assign a lead_score from 0 to 100.\n\nCalculate the score using these factors:\n\n1. Business is a relevant B2B prospect: 0–20 points\n2. Business has a clear potential fit for AI/automation services: 0–25 points\n3. Business has an active website or online presence: 0–15 points\n4. Business appears established based on rating and review count: 0–15 points\n5. There is a reasonable business improvement/opportunity that can be addressed by automation: 0–15 points\n6. There is enough information to personalize an outreach message: 0–10 points\n\nAdd the points to produce the final score.\n\nDo NOT automatically give a score of 0 just because a specific pain point cannot be proven.\n\nIf a pain point cannot be verified, write \"Insufficient evidence\" for the pain_point field, but still score the lead based on the other available evidence.\n\nThe score must be an integer between 0 and 100.\n\nA business with strong evidence across multiple factors should normally receive a score above 70.\n\nReturn ONLY valid JSON.\n\nBusiness Name: {{ $json['Business name'] }}\nCategory: {{ $json.Catogery }}\nRating: {{ $json.Rating }}\nReviews: {{ $json.Reviews }}\nAddress: {{ $json.Address }}\nWebsite: {{ $json.Website }}\n\nReturn exactly:\n\n{\n  \"lead_score\": 0,\n  \"business_type\": \"\",\n  \"recommended_service\": \"\",\n  \"pain_point\": \"\",\n  \"evidence\": \"\",\n  \"personalization_angle\": \"\"\n}\n\nDo not use markdown.\nDo not use ```json.\nDo not write anything before or after the JSON.",
+        "options": {
+          "systemMessage": "You are a B2B lead qualification specialist. Use only supplied facts. Never invent details. Return ONLY valid JSON matching the schema."
+        }
+      },
+      "id": "197debe6-4cf3-46d4-9160-ca3a13509802",
+      "name": "Analyze Business Opportunity",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        5184,
+        1440
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const email = String($json.primaryEmail || '').trim().toLowerCase();\nconst syntaxOk = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);\nconst disposable = /@(mailinator|guerrillamail|10minutemail|tempmail)\\./i.test(email);\nreturn { json: { ...$json, emailValid: syntaxOk && !disposable, emailValidation: syntaxOk && !disposable ? 'valid_format' : 'invalid_or_disposable' } };"
+      },
+      "id": "cd8ca0eb-b545-426e-ac32-8f3ce39ab7ab",
+      "name": "Email Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4224,
+        1376
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.emailValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "89c653f3-daea-46b6-a6cb-4cce9a843eb6",
+      "name": "Valid Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4480,
+        1376
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const website = String($json.website || '').replace(/\\/$/, '');\n\nconst candidates = [\n  `${website}/contact`,\n  `${website}/contact-us`,\n  `${website}/contactus`,\n  `${website}/get-in-touch`,\n  website\n];\n\nreturn {\n  json: {\n    ...$json,\n    contactCandidates: candidates,\n    contactCandidateIndex: 0\n  }\n};"
+      },
+      "id": "c912ee82-b279-4e1f-86a0-936f37e1ee92",
+      "name": "Build Contact Candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.contactCandidates[$json.contactCandidateIndex || 0] }}",
+        "options": {}
+      },
+      "id": "15e19fc7-7ca4-4067-8ffa-5105c598a375",
+      "name": "Visit Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3696,
+        1488
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const html = String($json.data || '');\nconst found = html.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi) || [];\nconst blocked = ['example.com','sentry.io'];\nconst emails = [...new Set(found.map(x => x.toLowerCase()))].filter(e => !blocked.some(x => e.includes(x)));\nconst priority = ['info@','hello@','contact@','sales@','support@','admin@','office@'];\nemails.sort((a,b) => {\n  const ai = priority.findIndex(p => a.startsWith(p));\n  const bi = priority.findIndex(p => b.startsWith(p));\n  return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi);\n});\nreturn { json: { ...$json, primaryEmail: emails[0] || '', emailCount: emails.length, emails } };"
+      },
+      "id": "002e0a72-fa78-4910-bda1-4e7137889fb0",
+      "name": "Extract Business Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3888,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.primaryEmail }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              },
+              "id": "220d2ae7-a0c8-4987-a430-ad9f36cfdaaa"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "195f4c1b-dd51-487c-8a9a-3e755265d801",
+      "name": "Email Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4064,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "b20c3a78-6e21-46bb-9a19-99311aa32dac",
+      "name": "Wait Before Email AI",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5984,
+        1488
+      ],
+      "webhookId": "821d857b-f8de-45d0-b8f1-dac2528013a6",
+      "notesInFlow": true,
+      "notes": "Spaces LLM requests by 3 seconds."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data?.approved ?? $json.approved ?? $json.payload?.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              },
+              "id": "90c69f15-89cf-4bab-90d2-b5389235c1bd"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ebdbf055-86d5-4048-bf56-1dea4d357807",
+      "name": "Email Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6368,
+        1712
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0075a0aa-836e-40c3-9365-91f6c607f0af",
+      "name": "Rate Limit Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        6736,
+        1712
+      ],
+      "webhookId": "1e22e5ef-b666-49e9-91ce-a5a2b2f3a138",
+      "notesInFlow": true,
+      "notes": "Spaces LLM requests by 5 seconds."
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $json.chatId || $('Extract Business Search').first().json.chatId }}",
+        "message": "=📧 *Email approval required*\n\nBusiness: {{ $('Save Lead CRM').item.json['Business name'] }}\nTo: {{ $('Email Validation').item.json.primaryEmail }}\nSubject: {{ $('Email Safety Check').item.json.subject }}\n\n{{ $('Email Safety Check').item.json.body }}\n\nSend this email?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "chatApproval": true,
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "dd9fd8f9-c1f3-4a08-8515-4ef775dbfb35",
+      "name": "Email Approval Preview",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        6128,
+        1712
+      ],
+      "webhookId": "12bd84a3-a790-4922-9d15-162ceb59fa3e",
+      "credentials": {
+        "telegramApi": {
+          "id": "aPDxTO8YZx9rwHV3",
+          "name": "Lead gen bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Email Validation').item.json.primaryEmail }}",
+        "subject": "={{ $('Email Safety Check').item.json.subject }}",
+        "emailType": "text",
+        "message": "={{ $('Email Safety Check').item.json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "078056d4-a675-44b4-b3f3-4058630cc483",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        6976,
+        1712
+      ],
+      "webhookId": "c76f8e58-1e1d-4f8d-8231-a5ec74ccca7e",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wXkeRHZCQtaa5Bax",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert B2B cold email writer.\n\nYou are writing an email on behalf of:\n\nCompany: {{ $('Client Configuration').item.json.client_company }}\nSender: {{ $('Client Configuration').item.json.client_founder }}\nTitle: {{ $('Client Configuration').item.json.client_title }}\nSignature: {{ $('Client Configuration').item.json.client_signature }}\n\nYour job is to write a short, professional and genuinely personalized cold email.\n\nIMPORTANT RULES:\n\n1. Use ONLY facts provided in the input.\n2. NEVER invent facts about the business.\n3. NEVER claim that the business is losing customers unless evidence supports it.\n4. NEVER invent a service, customer, review, statistic or business problem.\n5. NEVER use placeholders such as:\n   [Name]\n   [Your Name]\n   [Company Name]\n   {{name}}\n   {{company}}\n6. Do not mention information that was not provided.\n7. If the business name is known, address the recipient as:\n   Hi Team,\n   Do NOT guess a person's name.\n8. Keep the email under 120 words.\n9. Keep it natural and non-spammy.\n10. Do not use excessive marketing language.\n11. Do not make guaranteed-result claims.\n12. Include one clear, low-pressure CTA.\n13. Use the recommended service only if it is relevant to the evidence.\n\nBusiness Name:\n{{ $('Save Lead CRM').item.json['Business name'] }}\n\nCategory:\n{{ $('Save Lead CRM').item.json.Catogery }}\n\n\nWebsite:\n{{ $('Save Lead CRM').item.json.Website }}\n\nRating:\n{{ $('Save Lead CRM').item.json.Rating }}\n\nReviews:\n{{ $('Save Lead CRM').item.json.Reviews }}\n\nLead Score:\n{{ $('Analyze Business Opportunity').item.json.output.lead_score }}\n\nRecommended Service:\n{{ JSON.parse($('Analyze Business Opportunity').item.json.output).recommended_service }}\n\nPain Point:\n{{ JSON.parse($('Analyze Business Opportunity').item.json.output).pain_point }}\n\nEvidence:\n{{ JSON.parse($('Analyze Business Opportunity').item.json.output).evidence }}\n\nPersonalization Angle:\n{{ JSON.parse($('Analyze Business Opportunity').item.json.output).personalization_angle }}\n\nReturn ONLY valid JSON:\n\n{\n  \"send\": true,\n  \"confidence\": 0.0,\n  \"subject\": \"\",\n  \"body\": \"\",\n  \"reason\": \"\"\n}\n\nThe body MUST follow this structure:\n\nHi Team,\n\n[Personalized observation based only on evidence.]\n\n[Relevant AI automation opportunity.]\n\n[Simple CTA.]\n\nBest Regards,\n{{ $('Client Configuration').item.json.client_founder }}\n{{ $('Client Configuration').item.json.client_title }}\n{{ $('Client Configuration').item.json.client_company }}\n\nDo not use [Name], [Your Name], or any other placeholder.",
+        "options": {
+          "systemMessage": "You are an expert B2B cold email writer. Use only the facts provided, never invent details or use placeholders, and return ONLY valid JSON matching the requested schema."
+        }
+      },
+      "id": "80fda709-b8bf-4ffd-89b6-22b65ffbea77",
+      "name": "Generate Personalized Email",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        5408,
+        1808
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let raw = $json.output || $json.text || '';\n\nlet parsed;\n\ntry {\n  parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\n} catch (error) {\n  parsed = {\n    send: false,\n    confidence: 0,\n    subject: '',\n    body: '',\n    reason: 'Invalid AI JSON'\n  };\n}\n\nconst subject = String(parsed.subject || '').trim();\nconst body = String(parsed.body || '').trim();\n\nconst forbiddenPlaceholders = [\n  '[name]',\n  '[your name]',\n  '[company name]',\n  '{{name}}',\n  '{{company}}',\n  '{{client_name}}',\n  '{{your name}}'\n];\n\nconst lowerText = `${subject}\\n${body}`.toLowerCase();\n\nconst containsPlaceholder = forbiddenPlaceholders.some(\n  placeholder => lowerText.includes(placeholder)\n);\n\nconst hasSubject = subject.length > 0;\nconst hasBody = body.length > 0;\nconst bodyLengthOk = body.length <= 1200;\nconst wordCount = body.split(/\\s+/).filter(Boolean).length;\nconst wordCountOk = wordCount <= 120;\nconst recipient = String($('Email Validation').item.json.primaryEmail || '').trim();\nconst recipientOk = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(recipient);\n\nconst hasGreeting =\n  /^(hi|hello|hey)\\s+(team|there)/i.test(body);\n\nconst hasSignature =\n  /best regards|regards|thanks|thank you/i.test(body);\n\nconst confidenceOk =\n  Number(parsed.confidence || 0) >= 0.75;\n\nconst safetyPassed =\n  Boolean(parsed.send) &&\n  confidenceOk &&\n  hasSubject &&\n  hasBody &&\n  bodyLengthOk &&\n  wordCountOk &&\n  hasGreeting &&\n  hasSignature &&\n  !containsPlaceholder &&\n  recipientOk;\n\nreturn {\n  json: {\n    ...$json,\n    send: Boolean(parsed.send),\n    confidence: Number(parsed.confidence || 0),\n    subject,\n    body,\n    safetyPassed,\n    safetyReason: safetyPassed\n      ? 'Passed'\n      : 'Failed email safety validation'\n  }\n};"
+      },
+      "id": "818d45bf-3705-4527-9dad-25032e36770c",
+      "name": "Email Safety Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5744,
+        1824
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.safetyPassed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "015898c4-db83-4e50-8840-5228453a3f9e",
+      "name": "Safe To Send?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5920,
+        1824
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ Number(JSON.parse($json.output).lead_score) }}",
+              "rightValue": 70,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              },
+              "id": "ea2ab85f-c0f3-42fb-8d49-39121a5f732e"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6bf33c54-d4b8-4ddb-bc33-1febb6465df7",
+      "name": "Lead Score >= 70?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5552,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        5168,
+        1680
+      ],
+      "id": "caadb457-bb3f-4f1e-b09a-05446539ebcb",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "IUcdJxkXqUDAkwGY",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        5280,
+        2016
+      ],
+      "id": "38d9c124-0f5d-4bfb-a625-71f237e71b89",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "IUcdJxkXqUDAkwGY",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Lead Search Request": [
+      {
+        "json": {
+          "update_id": 191859229,
+          "message": {
+            "message_id": 926,
+            "from": {
+              "id": 8665544300,
+              "is_bot": false,
+              "first_name": "Abhishek",
+              "last_name": "Jatav",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 8665544300,
+              "first_name": "Abhishek",
+              "last_name": "Jatav",
+              "type": "private"
+            },
+            "date": 1787846035,
+            "text": "Digital marketing agency in india"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Lead Search Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Business Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Business Search": {
+      "main": [
+        [
+          {
+            "node": "Processing Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processing Notification": {
+      "main": [
+        [
+          {
+            "node": "Google Maps Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Maps Search": {
+      "main": [
+        [
+          {
+            "node": "Split Business Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Business Results": {
+      "main": [
+        [
+          {
+            "node": "Clean & Normalize Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean & Normalize Lead": {
+      "main": [
+        [
+          {
+            "node": "Load Existing Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Existing Leads": {
+      "main": [
+        [
+          {
+            "node": "Check Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Process Leads One-by-One",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Leads One-by-One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Website Exists?": {
+      "main": [
+        [
+          {
+            "node": "Build Contact Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Contact Candidates": {
+      "main": [
+        [
+          {
+            "node": "Visit Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Visit Website": {
+      "main": [
+        [
+          {
+            "node": "Extract Business Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Found?": {
+      "main": [
+        [
+          {
+            "node": "Email Validation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Leads One-by-One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Validation": {
+      "main": [
+        [
+          {
+            "node": "Valid Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Email?": {
+      "main": [
+        [
+          {
+            "node": "Save Lead CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Leads One-by-One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead CRM": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Leads One-by-One": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Website Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Analysis": {
+      "main": [
+        [
+          {
+            "node": "Analyze Business Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Business Opportunity": {
+      "main": [
+        [
+          {
+            "node": "Lead Score >= 70?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client Configuration": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Email AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Email AI": {
+      "main": [
+        [
+          {
+            "node": "Generate Personalized Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Personalized Email": {
+      "main": [
+        [
+          {
+            "node": "Email Safety Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Safety Check": {
+      "main": [
+        [
+          {
+            "node": "Safe To Send?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Safe To Send?": {
+      "main": [
+        [
+          {
+            "node": "Email Approval Preview",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Leads One-by-One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Approval Preview": {
+      "main": [
+        [
+          {
+            "node": "Email Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Approved?": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Delay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Leads One-by-One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Delay": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Process Leads One-by-One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Business Email": {
+      "main": [
+        [
+          {
+            "node": "Email Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Score >= 70?": {
+      "main": [
+        [
+          {
+            "node": "Client Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Leads One-by-One",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze Business Opportunity",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Personalized Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8312c412-b637-4a12-9bfd-32aa2853a877",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21edfed17774df844487314057a3d9cfdb7b183357cedc6f23f29779f799aad8"
+  },
+  "nodeGroups": [],
+  "id": "zStt6VL8j3CITrfh",
+  "tags": []
+}
