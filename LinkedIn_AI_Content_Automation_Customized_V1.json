@@ -1,0 +1,448 @@
+{
+  "name": "AI LinkedIn Trends, Content & Publishing Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "271adc57-754c-4f88-a324-ad66f1aa592b",
+      "name": "Trigger • AI Content Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        -528,
+        160
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the AI Trends & Tools Researcher for a professional LinkedIn content brand.\n\nSelect ONE strong, timely content opportunity from the supplied research.\n\nFocus on AI news, new AI tools, AI automation, AI agents, n8n/Make/Zapier, practical AI tutorials, AI comparisons, and AI business use cases.\n\nLATEST RESEARCH:\n{{ $('Research • Prepare Trend Data').item.json.research }}\n\nRules:\n- Prefer recent, useful and professionally relevant topics.\n- Never invent facts, features, dates, statistics or announcements.\n- Avoid generic AI hype.\n- Select only a topic supported by the supplied research.\n- Keep the hook curiosity-driven but factual.\n- Prefer a clear angle that can be explained in one LinkedIn post.\n\nReturn exactly one structured topic with title, rationale, hook, content_type, source_title, source_url and source_publisher.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "3995cb7f-7e79-46f2-9ae2-2bfde68e6efd",
+      "name": "AI • Trend Topic Selector",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        160,
+        160
+      ],
+      "typeVersion": 2,
+      "alwaysOutputData": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"title\": \"New AI tool / update that matters\",\n  \"rationale\": \"Why this specific development is useful or important.\",\n  \"hook\": \"A strong factual LinkedIn opening.\",\n  \"content_type\": \"AI Tool\",\n  \"source_title\": \"Original source title\",\n  \"source_url\": \"https://example.com/article\",\n  \"source_publisher\": \"Publisher name\"\n}"
+      },
+      "id": "ded2a819-4c92-40f9-a3bb-62cbbce8d118",
+      "name": "AI • Topic Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        320,
+        384
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a senior LinkedIn content creator and AI industry copywriter.\n\nCreate ONE high-quality LinkedIn post from the researched topic.\n\nTopic:\n{{ $json.output.title }}\n\nWhy it matters:\n{{ $json.output.rationale }}\n\nSuggested hook:\n{{ $json.output.hook }}\n\nContent type:\n{{ $json.output.content_type }}\n\nSource:\n{{ $json.output.source_title }}\n{{ $json.output.source_url }}\n\nRequirements:\n- Start with a strong 1–2 line hook.\n- Explain the topic in plain English.\n- Focus on what is actually new, useful or different.\n- Include practical implications or 2–4 takeaways when appropriate.\n- Never invent pricing, benchmarks, capabilities, users or statistics.\n- Never claim personal testing unless supported by the research.\n- Use short paragraphs and natural LinkedIn formatting.\n- Avoid generic AI hype and corporate jargon.\n- Include the exact source URL at the end as “Source: <URL>”.\n- Target length: 180–300 words.\n\nAlso create a concise visual concept for a professional LinkedIn infographic.\n\nReturn only the structured output required by the parser.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "id": "8f25f4f9-9083-4a31-ab34-fa3ad42a2046",
+      "name": "AI • LinkedIn Post Writer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        464,
+        144
+      ],
+      "typeVersion": 1.7
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"post title\": \"A clear, curiosity-driven LinkedIn title\",\n  \"post content\": \"The complete LinkedIn post including the source URL.\",\n  \"image description\": \"Detailed visual brief for a premium LinkedIn infographic: headline, subheadline, 3-5 concise key points, visual metaphor, layout, typography hierarchy, dark navy/black background, electric blue/purple glow, yellow highlight accents, clean rounded cards, high contrast, professional editorial AI aesthetic. No generic stock photo look.\"\n}"
+      },
+      "id": "2f002f3f-1c58-44dc-8a89-53260477d99c",
+      "name": "AI • Post Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        608,
+        352
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a LinkedIn hashtag specialist focused on AI content.\n\nAnalyze:\nTitle: {{ $json.output['post title'] }}\nContent: {{ $json.output['post content'] }}\n\nGenerate exactly 5 highly relevant hashtags.\n\nPrefer relevance over popularity. Match the actual topic, tool, automation and audience. Do not use unrelated trending hashtags or repeat similar hashtags.\n\nReturn ONLY the structured output required by the parser.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "7ce101b2-d6f6-4af1-b96a-db547b68348b",
+      "name": "AI • LinkedIn Hashtag Generator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        912,
+        304
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"Hashtags\": [\"#AI\", \"#AIAutomation\", \"#AIAgents\", \"#n8n\", \"#FutureOfWork\"]\n}"
+      },
+      "id": "0f94ef00-f21d-43ea-bed4-3e62bf6b869b",
+      "name": "AI • Hashtag Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1120,
+        528
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "eda48923-52e6-4232-9375-bb04baa425d8",
+      "name": "Core • Merge Content & Visual",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        1280,
+        128
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "person": "ADI5hZitlV",
+        "text": "={{ $('Content creator').item.json.output['post content'] + \"\\n\\n\" + $('Hashtag generator /SEO').item.json.output.Hashtags.join(\" \") }}",
+        "shareMediaCategory": "IMAGE",
+        "additionalFields": {}
+      },
+      "id": "9fcb46f1-dd29-45f4-b623-06e5934c56aa",
+      "name": "LinkedIn • Publish Post",
+      "type": "n8n-nodes-base.linkedIn",
+      "position": [
+        1504,
+        112
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        112,
+        384
+      ],
+      "id": "4c0ef704-ee88-46c8-9bd3-68f9d693e265",
+      "name": "AI • Topic Research Model"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        464,
+        352
+      ],
+      "id": "da07357f-8d2a-4e7b-87ab-0211b8c8dd62",
+      "name": "AI • Post Writing Model"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        864,
+        512
+      ],
+      "id": "d958498c-b46a-42a6-98a7-8341bccbb0e2",
+      "name": "AI • Hashtag Model"
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=(AI+tools+OR+AI+automation+OR+AI+agents+OR+n8n+OR+Make+OR+Zapier+OR+OpenAI+OR+Anthropic+OR+Gemini+OR+Claude)&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "id": "5ba4ca23-6e22-4c20-becb-90d2a1a55073",
+      "name": "Research • AI Trends RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -272,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst rows = items\n  .map(item => item.json)\n  .filter(item => item.title && item.link)\n  .sort((a, b) => {\n    const dateA = new Date(a.pubDate || a.isoDate || 0).getTime();\n    const dateB = new Date(b.pubDate || b.isoDate || 0).getTime();\n    return dateB - dateA;\n  })\n  .slice(0, 20)\n  .map((item, index) => {\n    const rawText = item.contentSnippet || item.content || item.description || \"\";\n\n    const cleanText = String(rawText)\n      .replace(/<[^>]*>/g, \" \")\n      .replace(/\\s+/g, \" \")\n      .trim()\n      .slice(0, 600);\n\n    return {\n      rank: index + 1,\n      title: String(item.title),\n      source: String(item.creator || item.source || item.author || \"\"),\n      published: String(item.pubDate || item.isoDate || \"\"),\n      url: String(item.link),\n      summary: cleanText\n    };\n  });\n\nconst researchText = rows\n  .map(item => {\n    return [\n      `#${item.rank} ${item.title}`,\n      `Source: ${item.source}`,\n      `Published: ${item.published}`,\n      `URL: ${item.url}`,\n      `Summary: ${item.summary}`\n    ].join(\"\\n\");\n  })\n  .join(\"\\n\\n---\\n\\n\");\n\nreturn [\n  {\n    json: {\n      research: researchText,\n      articles: rows,\n      articleCount: rows.length\n    }\n  }\n];"
+      },
+      "id": "bf6a29a9-9091-47ef-bed2-df517313ce52",
+      "name": "Research • Prepare Trend Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.1-flash-image",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.1-flash-image (Nano Banana 2)"
+        },
+        "prompt": "=Create a premium professional LinkedIn infographic based on this visual brief:\n\n{{ $json.output['image description'] }}\n\nMain post title:\n{{ $json.output['post title'] }}\n\nDesign:\n- 4:3 landscape LinkedIn editorial graphic\n- Dark navy / near-black background\n- High-contrast white typography\n- Electric blue and purple accents\n- Yellow highlights used sparingly\n- Strong visual hierarchy\n- Visual must represent the actual AI topic\n- Clean information cards and professional editorial layout\n- No LinkedIn UI, fake screenshots or invented facts\n- Keep visible text short and readable\n- Avoid generic stock imagery",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        64
+      ],
+      "id": "182e7ed6-193d-4766-9a2c-b2f47cb9d5ca",
+      "name": "AI • Generate LinkedIn Graphic"
+    },
+    {
+      "parameters": {
+        "content": "# AI LinkedIn Trends, Content & Publishing Automation\n\n## What it does\nCollects AI-related news through RSS, selects one topic, writes a LinkedIn post, generates hashtags, creates an infographic and publishes it.\n\n## Required setup\n1. Connect the buyer's own Anthropic credential.\n2. Connect the buyer's own Google Gemini credential.\n3. Connect the buyer's own LinkedIn OAuth credential.\n4. Select the correct LinkedIn profile/person in `LinkedIn • Publish Post`.\n5. Verify LinkedIn publishing permissions.\n6. Review the RSS query if a different niche is required.\n7. Confirm n8n timezone and schedule.\n\n## Before activation\nRun a manual test and review the source, post, hashtags and image.\n\nWorkflow is inactive by default.",
+        "height": 600,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -560
+      ],
+      "id": "3530022c-3d07-4e5a-9ccc-48d93b691fc6",
+      "name": "NOTES • Buyer Setup Guide"
+    },
+    {
+      "parameters": {
+        "content": "# Customization & Publishing Notes\n\n## Customize\nYou can change:\n- Industry / niche\n- Target audience\n- Brand voice\n- Content language\n- Content categories\n- Posting frequency\n\n## Accuracy\nThe workflow depends on RSS research available at execution time. News can become outdated quickly. Review important claims before automatic publishing.\n\nAI is instructed not to invent facts, pricing, capabilities, statistics or announcements.\n\n## LinkedIn\nThis version is designed for LinkedIn profile publishing. Do not market it as company-page or multi-platform publishing unless separately configured and tested.\n\n## Credentials\nUse the buyer's own Anthropic, Gemini and LinkedIn credentials. Do not embed seller credentials.",
+        "height": 600,
+        "width": 500
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1540,
+        -560
+      ],
+      "id": "e32ac470-0e2c-4973-828c-c32f9cca307d",
+      "name": "NOTES • Customization & Safety"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Core • Merge Content & Visual": {
+      "main": [
+        [
+          {
+            "node": "LinkedIn • Publish Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • LinkedIn Post Writer": {
+      "main": [
+        [
+          {
+            "node": "AI • LinkedIn Hashtag Generator",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI • Generate LinkedIn Graphic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger • AI Content Schedule": {
+      "main": [
+        [
+          {
+            "node": "Research • AI Trends RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • LinkedIn Hashtag Generator": {
+      "main": [
+        [
+          {
+            "node": "Core • Merge Content & Visual",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "AI • Trend Topic Selector": {
+      "main": [
+        [
+          {
+            "node": "AI • LinkedIn Post Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Topic Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI • Trend Topic Selector",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Post Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI • LinkedIn Post Writer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Hashtag Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI • LinkedIn Hashtag Generator",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Topic Research Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI • Trend Topic Selector",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Post Writing Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI • LinkedIn Post Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Hashtag Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI • LinkedIn Hashtag Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research • AI Trends RSS": {
+      "main": [
+        [
+          {
+            "node": "Research • Prepare Trend Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Research • Prepare Trend Data": {
+      "main": [
+        [
+          {
+            "node": "AI • Trend Topic Selector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Generate LinkedIn Graphic": {
+      "main": [
+        [
+          {
+            "node": "Core • Merge Content & Visual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7ce56b65-f267-41ac-9778-b37f187ef9fa",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodeGroups": [],
+  "id": "YkeMEAdYBE0zHJnb",
+  "tags": []
+}
