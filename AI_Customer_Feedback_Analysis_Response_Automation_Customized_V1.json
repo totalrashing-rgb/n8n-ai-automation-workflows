@@ -1,0 +1,698 @@
+{
+  "name": "AI Customer Feedback Analysis & Response Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Share Your Feedback",
+        "formDescription": "Your feedback helps us improve our products and customer experience.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Customer Name"
+            },
+            {
+              "fieldLabel": "Customer Email",
+              "fieldType": "email"
+            },
+            {
+              "fieldLabel": "Order ID"
+            },
+            {
+              "fieldLabel": "Feedback"
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        912,
+        -1776
+      ],
+      "id": "7c08f793-360a-4192-b7a7-253e4af6e885",
+      "name": "Trigger • Customer Feedback Form",
+      "webhookId": "a116b90c-5d94-4dae-9502-9711b49f7d1a"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the customer feedback below and return valid JSON only.\n\nCustomer feedback:\n{{ $json['Feedback'] }}\n\nReturn exactly:\n{\n  \"sentiment\": \"positive|neutral|negative\",\n  \"category\": \"product|service|delivery|support|billing|other\",\n  \"summary\": \"A concise factual summary of the feedback.\",\n  \"urgent\": false\n}\n\nRules:\n- Use only information present in the feedback.\n- Do not invent causes, refunds, timelines, policies, or promises.\n- Set urgent=true only for a serious complaint, safety issue, major service failure, or issue clearly needing prompt human attention.\n- Keep the summary concise and factual.",
+        "options": {
+          "systemMessage": "You are a customer-feedback triage assistant. Be factual, conservative, and structured."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1120,
+        -1776
+      ],
+      "id": "fe4ac57b-4ad4-49ec-b1b6-63994ffe5951",
+      "name": "AI • Analyze Customer Feedback"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        -1648
+      ],
+      "id": "f80af6b5-f97e-4175-a3b4-07e55053e258",
+      "name": "AI Model • Feedback Analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = String($json.output ?? '').trim();\n\nconst cleaned = raw\n  .replace(/^```json\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/```$/i, '')\n  .trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (error) {\n  throw new Error(`Feedback analysis JSON could not be parsed: ${error.message}`);\n}\n\nreturn [{\n  json: {\n    sentiment: parsed.sentiment || 'neutral',\n    category: parsed.category || 'other',\n    summary: parsed.summary || 'No summary generated.',\n    urgent: Boolean(parsed.urgent),\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        -1776
+      ],
+      "id": "4648e2f2-46b4-4719-b96e-a93ff53ae71c",
+      "name": "Logic • Parse Feedback Analysis"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a7900cdd-f14d-4be6-945e-9d3640ef27af",
+              "leftValue": "={{ $json.urgent }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1664,
+        -1776
+      ],
+      "id": "d68d2d44-bcbd-4fdb-90c9-0690411fbeb0",
+      "name": "Routing • Urgent Feedback?"
+    },
+    {
+      "parameters": {
+        "sendTo": "={$env.SUPPORT_ESCALATION_EMAIL || 'support@example.com'}",
+        "subject": "={{ `Urgent Customer Feedback Alert | ${$('Trigger • Customer Feedback Form').item.json['Order ID'] || 'No Order ID'}` }}",
+        "emailType": "text",
+        "message": "=Hello Support Team,\n\nAn urgent customer feedback item has been detected.\n\nCustomer: {{ $('Trigger • Customer Feedback Form').item.json['Customer Name'] }}\nEmail: {{ $('Trigger • Customer Feedback Form').item.json['Customer Email'] }}\nOrder ID: {{ $('Trigger • Customer Feedback Form').item.json['Order ID'] || 'Not provided' }}\n\nSentiment: {{ $('Logic • Parse Feedback Analysis').item.json.sentiment }}\nCategory: {{ $('Logic • Parse Feedback Analysis').item.json.category }}\nSummary: {{ $('Logic • Parse Feedback Analysis').item.json.summary }}\n\nPlease review the issue using your normal support process.\n\nRegards,\n{{ $env.SUPPORT_AGENT_NAME || 'Customer Support' }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1872,
+        -1872
+      ],
+      "id": "ef60f151-212d-43a8-ad82-10eb876056b2",
+      "name": "Support • Escalation Alert"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.FEEDBACK_SHEET_ID || ''}}",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{$env.FEEDBACK_SHEET_NAME || 'Feedback CRM'}}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer": "={{ $('Trigger • Customer Feedback Form').item.json['Customer Name'] }}",
+            "Customer Email": "={{ $('Trigger • Customer Feedback Form').item.json['Customer Email'] }}",
+            "Order ID": "={{ $('Trigger • Customer Feedback Form').item.json['Order ID'] || '' }}",
+            "Feedback": "={{ $('Trigger • Customer Feedback Form').item.json['Feedback'] }}",
+            "Sentiment": "={{ $('Logic • Parse Feedback Analysis').item.json.sentiment }}",
+            "Category": "={{ $('Logic • Parse Feedback Analysis').item.json.category }}",
+            "Summary": "={{ $('Logic • Parse Feedback Analysis').item.json.summary }}",
+            "Urgent": "={{ $('Logic • Parse Feedback Analysis').item.json.urgent }}",
+            "Escalated To": "Support Escalation",
+            "Date": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [
+            "Customer Email"
+          ],
+          "schema": [
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Customer Email",
+              "displayName": "Customer Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Feedback",
+              "displayName": "Feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Urgent",
+              "displayName": "Urgent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Escalated To",
+              "displayName": "Escalated To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2080,
+        -1872
+      ],
+      "id": "360e97bb-6b6a-4f83-9530-0d1130a243ce",
+      "name": "CRM • Log Escalated Feedback"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional customer support representative for {{ $env.BRAND_NAME || 'the company' }}.\nYour support representative name is {{ $env.SUPPORT_AGENT_NAME || 'Customer Support' }}.\n\nWrite a polite, empathetic, concise email response based only on the information provided.\n\nCustomer Name: {{ $('Trigger • Customer Feedback Form').item.json['Customer Name'] }}\nFeedback Summary: {{ $('Logic • Parse Feedback Analysis').item.json.summary }}\nSentiment: {{ $('Logic • Parse Feedback Analysis').item.json.sentiment }}\nCategory: {{ $('Logic • Parse Feedback Analysis').item.json.category }}\nUrgent: {{ $('Logic • Parse Feedback Analysis').item.json.urgent }}\n\nRules:\n- Thank the customer for sharing feedback.\n- Acknowledge the concern appropriately.\n- Apologize when the feedback is negative or indicates a problem.\n- For urgent issues, say the matter has been flagged for review; do not promise a specific resolution or timeline.\n- Do not invent refunds, policies, timelines, causes, actions, or outcomes.\n- Do not claim a human has already reviewed the issue unless the workflow explicitly says so.\n- Maximum 150 words.\n- Return only the email body, with no markdown or explanations.",
+        "options": {
+          "systemMessage": "Write accurate customer-support responses without inventing business facts."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2288,
+        -1872
+      ],
+      "id": "1c135e54-f6b5-4797-85ff-3adc8d9ab972",
+      "name": "AI • Draft Customer Response"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2288,
+        -1696
+      ],
+      "id": "42e477ac-4b67-42fd-9f62-78ca54367a5e",
+      "name": "AI Model • Customer Response"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Trigger • Customer Feedback Form').item.json['Customer Email'] }}",
+        "subject": "={{ `Regarding your feedback${$('Trigger • Customer Feedback Form').item.json['Order ID'] ? ` | Order ${$('Trigger • Customer Feedback Form').item.json['Order ID']}` : ''}` }}",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2640,
+        -1872
+      ],
+      "id": "84acb687-5fb6-48ea-9de2-bced156ef3ef",
+      "name": "Customer • Send Response Email"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$env.FEEDBACK_SHEET_ID || ''}}",
+          "mode": "list"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{$env.FEEDBACK_SHEET_NAME || 'Feedback CRM'}}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer": "={{ $('Trigger • Customer Feedback Form').item.json['Customer Name'] }}",
+            "Customer Email": "={{ $('Trigger • Customer Feedback Form').item.json['Customer Email'] }}",
+            "Order ID": "={{ $('Trigger • Customer Feedback Form').item.json['Order ID'] || '' }}",
+            "Feedback": "={{ $('Trigger • Customer Feedback Form').item.json['Feedback'] }}",
+            "Sentiment": "={{ $('Logic • Parse Feedback Analysis').item.json.sentiment }}",
+            "Category": "={{ $('Logic • Parse Feedback Analysis').item.json.category }}",
+            "Summary": "={{ $('Logic • Parse Feedback Analysis').item.json.summary }}",
+            "Urgent": "={{ $('Logic • Parse Feedback Analysis').item.json.urgent }}",
+            "Escalated To": "Standard Support",
+            "Date": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "matchingColumns": [
+            "Customer Email"
+          ],
+          "schema": [
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Customer Email",
+              "displayName": "Customer Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order ID",
+              "displayName": "Order ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Feedback",
+              "displayName": "Feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Urgent",
+              "displayName": "Urgent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Escalated To",
+              "displayName": "Escalated To",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1936,
+        -1568
+      ],
+      "id": "1896e280-76f5-4d7b-a822-783bb9a00945",
+      "name": "CRM • Log Standard Feedback"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional customer support representative for {{ $env.BRAND_NAME || 'the company' }}.\nYour support representative name is {{ $env.SUPPORT_AGENT_NAME || 'Customer Support' }}.\n\nWrite a polite, empathetic, concise email response based only on the information provided.\n\nCustomer Name: {{ $('Trigger • Customer Feedback Form').item.json['Customer Name'] }}\nFeedback Summary: {{ $('Logic • Parse Feedback Analysis').item.json.summary }}\nSentiment: {{ $('Logic • Parse Feedback Analysis').item.json.sentiment }}\nCategory: {{ $('Logic • Parse Feedback Analysis').item.json.category }}\nUrgent: {{ $('Logic • Parse Feedback Analysis').item.json.urgent }}\n\nRules:\n- Thank the customer for sharing feedback.\n- Acknowledge the concern appropriately.\n- Apologize when the feedback is negative or indicates a problem.\n- For urgent issues, say the matter has been flagged for review; do not promise a specific resolution or timeline.\n- Do not invent refunds, policies, timelines, causes, actions, or outcomes.\n- Do not claim a human has already reviewed the issue unless the workflow explicitly says so.\n- Maximum 150 words.\n- Return only the email body, with no markdown or explanations.",
+        "options": {
+          "systemMessage": "Write accurate customer-support responses without inventing business facts."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2144,
+        -1568
+      ],
+      "id": "614ce9b9-808d-4668-8f31-ad0154629a89",
+      "name": "AI • Draft Standard Response"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2144,
+        -1392
+      ],
+      "id": "fac636ef-203e-45af-b97f-0aa65f0f68b1",
+      "name": "AI Model • Standard Response"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Trigger • Customer Feedback Form').item.json['Customer Email'] }}",
+        "subject": "={{ `Regarding your feedback${$('Trigger • Customer Feedback Form').item.json['Order ID'] ? ` | Order ${$('Trigger • Customer Feedback Form').item.json['Order ID']}` : ''}` }}",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2496,
+        -1568
+      ],
+      "id": "9e3000f5-fb7b-47c6-bcb8-dd3c13c15f5f",
+      "name": "Customer • Send Standard Response"
+    },
+    {
+      "id": "71935e7e-bd32-4378-85eb-13df45fae911",
+      "name": "NOTES • Buyer Setup Guide",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        720,
+        -2064
+      ],
+      "parameters": {
+        "content": "## Buyer Setup Guide\n\nConfigure these n8n environment variables:\n- `OPENAI_API_KEY` — OpenAI credential/API setup for the AI model nodes\n- `FEEDBACK_SHEET_ID` — destination Google Sheet ID\n- `FEEDBACK_SHEET_NAME` — destination sheet/tab name\n- `SUPPORT_ESCALATION_EMAIL` — urgent-feedback inbox\n- `BRAND_NAME` — customer-facing business name\n- `SUPPORT_AGENT_NAME` — support representative name\n\nRequired Google Sheet columns:\n`Customer`, `Customer Email`, `Order ID`, `Feedback`, `Sentiment`, `Category`, `Summary`, `Urgent`, `Escalated To`, `Date`\n\nConnect the buyer's own OpenAI and Google Sheets credentials in n8n.\n\nTest positive, neutral, and urgent feedback before enabling production automation."
+      }
+    },
+    {
+      "id": "f8cc4a46-783b-432f-a388-5035366f7a63",
+      "name": "NOTES • Automation Safety & Limitations",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        -2064
+      ],
+      "parameters": {
+        "content": "## Automation Safety & Limitations\n\n- AI classification is a triage signal, not a guaranteed judgement.\n- Review business-critical or sensitive complaints.\n- Customer emails must not invent refunds, policies, deadlines, causes, or resolutions.\n- Feedback can contain personal information; follow the buyer's privacy and retention policies.\n- Keep escalation routing and support processes maintained.\n- Test every branch before activating the workflow.\n- Workflow is inactive by default.\n- Use buyer-owned credentials and data."
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Trigger • Customer Feedback Form": {
+      "main": [
+        [
+          {
+            "node": "AI • Analyze Customer Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Model • Feedback Analysis": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI • Analyze Customer Feedback",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Analyze Customer Feedback": {
+      "main": [
+        [
+          {
+            "node": "Logic • Parse Feedback Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic • Parse Feedback Analysis": {
+      "main": [
+        [
+          {
+            "node": "Routing • Urgent Feedback?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Routing • Urgent Feedback?": {
+      "main": [
+        [
+          {
+            "node": "Support • Escalation Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "CRM • Log Standard Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support • Escalation Alert": {
+      "main": [
+        [
+          {
+            "node": "CRM • Log Escalated Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Log Escalated Feedback": {
+      "main": [
+        [
+          {
+            "node": "AI • Draft Customer Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Model • Customer Response": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI • Draft Customer Response",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Draft Customer Response": {
+      "main": [
+        [
+          {
+            "node": "Customer • Send Response Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM • Log Standard Feedback": {
+      "main": [
+        [
+          {
+            "node": "AI • Draft Standard Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI • Draft Standard Response": {
+      "main": [
+        [
+          {
+            "node": "Customer • Send Standard Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Model • Standard Response": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI • Draft Standard Response",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
