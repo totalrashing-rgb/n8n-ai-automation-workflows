@@ -1,0 +1,1432 @@
+{
+  "name": "AI-powered WhatsApp chatbot for text, voice, images, and PDF with RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": ""
+        }
+      },
+      "id": "4e65ad8d-413e-4386-bd66-63110ceec445",
+      "name": "Knowledge Base Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        2720,
+        992
+      ],
+      "typeVersion": 1.9
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "id": "78202a01-a6db-4535-a87b-40dcf770e398",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        2720,
+        1168
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "0e8a482c-9aca-4770-b2be-51ea70c55371",
+      "name": "Embeddings OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "position": [
+        3072,
+        1328
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "3bc44017-ef18-4ccf-913f-f6c7d4b5a2c5",
+      "name": "When clicking \"Execute Workflow\"",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -352,
+        1408
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=memory_{{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}"
+      },
+      "id": "640cc90b-5f16-4c50-8e16-ed746c598065",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        2832,
+        1168
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "productDocs",
+        "toolDescription": "retreive documentation",
+        "mongoCollection": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8n-template",
+          "cachedResultName": "n8n-template"
+        },
+        "vectorIndexName": "data_index",
+        "options": {}
+      },
+      "id": "d282f81b-addd-4c50-9afa-ab01b987c73e",
+      "name": "MongoDB Vector Search",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreMongoDBAtlas",
+      "position": [
+        2944,
+        1168
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.content }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "doc_id",
+                "value": "={{ $json.documentId }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c53e1c3a-fc63-4018-85c2-3fae8b656ce9",
+      "name": "Document Section Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "position": [
+        256,
+        1552
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "chunkSize": 3000,
+        "chunkOverlap": 200,
+        "options": {
+          "splitCode": "markdown"
+        }
+      },
+      "id": "171629b4-b13d-4eb1-ad86-0b8a8822b5f4",
+      "name": "Document Chunker",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "position": [
+        320,
+        1728
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "mongoCollection": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8n-template",
+          "cachedResultName": "n8n-template"
+        },
+        "vectorIndexName": "data_index",
+        "options": {}
+      },
+      "id": "01b084ef-d336-40fe-ae79-e38dce0a8fa0",
+      "name": "MongoDB Vector Store Inserter",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreMongoDBAtlas",
+      "position": [
+        96,
+        1376
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2ff3784c-90bf-4526-a6ab-f4c44b022e73",
+      "name": "OpenAI Embeddings Generator",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "position": [
+        64,
+        1568
+      ],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "https://docs.google.com/document/d/1gvgp71e9edob8WLqFIYCdzC7kUq3pLO37VKb-a-vVW4/edit?tab=t.0"
+      },
+      "id": "de4744c8-f3cd-4385-878c-c1e93c49cf96",
+      "name": "Google Docs Importer",
+      "type": "n8n-nodes-base.googleDocs",
+      "position": [
+        -128,
+        1408
+      ],
+      "typeVersion": 2,
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "ChdY7hLtA0dos3R4",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "id": "0d9f5293-11fb-4097-b9c8-956d8ba459a6",
+      "name": "WhatsApp Trigger",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "position": [
+        384,
+        992
+      ],
+      "webhookId": "ab09ca3e-53b2-4079-9ddc-bccb2f69551b",
+      "typeVersion": 1,
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "5aRd3EjIncNh6l3E",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "translate",
+        "options": {}
+      },
+      "id": "4dd46336-ef9a-484f-8b9e-be1f26fa7de6",
+      "name": "OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        1472,
+        752
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "inputType": "base64",
+        "options": {
+          "detail": "auto"
+        }
+      },
+      "id": "1bf61650-de14-413f-8136-631888b4c9fb",
+      "name": "OpenAI1",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [
+        1472,
+        992
+      ],
+      "typeVersion": 1.8,
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "2a2a188c-243f-48fb-b71f-bd42e9907645",
+      "name": "Extract from PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [
+        2064,
+        1440
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "xls",
+        "options": {}
+      },
+      "id": "bfc7e0e7-c0a9-4b95-ad61-047f7d567b57",
+      "name": "Extract from XLS",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [
+        1968,
+        1648
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "id": "41ebcc3e-3d38-4f9f-b18a-349a3e827577",
+      "name": "Extract from XLSX",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [
+        1968,
+        1808
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "72ae0d20-616a-4a65-9b14-53bf53656091",
+              "name": "data",
+              "type": "string",
+              "value": "={{ $json }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f90433a3-a6d1-48f5-8aec-4da0570477f0",
+      "name": "Map JSON",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        2208,
+        1568
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "jsCode": "let requests = $(\"Download Document\").all()\n\nrequests.forEach((request) => {\n  let mime_type = request.json.mime_type\n\n  if (\n    mime_type === \"text/calendar\" || \n    mime_type === \"application/ics\" || \n    mime_type === \"text/x-calendar\"\n  ) {\n    request.json.mime_type = \"mapped/calendar\"\n  }\n\n  if (\n    mime_type === \"application/xml\" || \n    mime_type === \"text/xml\") {\n    request.json.mime_type = \"mapped/xml\"\n  }\n\n  if (!mime_type) {\n    request.json.mime_type = $('Gets WhatsApp Document Source URL').first().json.mime_type\n  }\n})\n\nreturn requests;"
+      },
+      "id": "040bde90-354a-4354-aa7e-3bc35554693a",
+      "name": "Map file extensions",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1424,
+        1328
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "da68bcca-a2a6-4676-8649-6fb1b664e44c",
+              "name": "text",
+              "type": "string",
+              "value": "=Parsed text: {{ $json.text || $json.data || $json }}\n\nCaption text: {{ $('Route Types').item.json.messages[0].document.caption }}\n\nMimeType: {{ $('Gets WhatsApp Document Source URL').item.json.mime_type }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4ad257c7-fa6f-4b66-bf14-c5a9c57d7be3",
+      "name": "Map document prompt",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        2448,
+        1392
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "48af2dcc-4ce9-45fc-abfc-54f803930092",
+              "name": "text",
+              "type": "string",
+              "value": "=User image description: {{ $json.content }}\n\nUser image caption: {{ $('Route Types').item.json.messages[0].image.caption }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2e3c9276-2e2b-4215-b74d-29fab1909565",
+      "name": "Map image prompt",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1680,
+        992
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "38aec976-a32c-4b0e-85f4-c90adc16abc9",
+              "name": "text",
+              "type": "string",
+              "value": "={{ $json.messages[0].text.body }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1e4ec82-4016-4dde-8cb0-1949dd81e22d",
+      "name": "Map text prompt",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1024,
+        544
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].audio.id}}"
+      },
+      "id": "d5d71bef-4083-4d67-ad5a-139b946fac0a",
+      "name": "Gets WhatsApp Voicemail Source URL",
+      "type": "n8n-nodes-base.whatsApp",
+      "position": [
+        1024,
+        752
+      ],
+      "webhookId": "bbe62f3d-8788-49d4-aae6-9e9411446d44",
+      "typeVersion": 1,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "tNl89IHlMtxUCamr",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].image.id }}"
+      },
+      "id": "59a36b39-ab10-45f4-94b6-969a6d243841",
+      "name": "Gets WhatsApp Image Source URL",
+      "type": "n8n-nodes-base.whatsApp",
+      "position": [
+        1024,
+        992
+      ],
+      "webhookId": "c2982df4-1d8d-4669-a724-44ae17d11e6c",
+      "typeVersion": 1,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "tNl89IHlMtxUCamr",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].document.id }}"
+      },
+      "id": "9fe9956f-f265-440f-88c2-7c625526a46b",
+      "name": "Gets WhatsApp Document Source URL",
+      "type": "n8n-nodes-base.whatsApp",
+      "position": [
+        1024,
+        1328
+      ],
+      "webhookId": "c2982df4-1d8d-4669-a724-44ae17d11e6c",
+      "typeVersion": 1,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "tNl89IHlMtxUCamr",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "283bcc36-244f-4417-9b7d-86726280e3a7",
+      "name": "Download Voicemail",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1248,
+        752
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "dbeb74a0-c60d-4242-9d95-f30f4414be50",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1248,
+        992
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "id": "21e0b462-9137-4050-ba59-599d3d72634f",
+      "name": "Download Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1248,
+        1328
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "2fc5c912-629b-4cbe-b5e3-7e3f0651c628",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.messages[0].type }}",
+                    "rightValue": "text"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "26a3d85c-0815-48ff-85ce-713129a1107c",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.messages[0].type }}",
+                    "rightValue": "audio"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "840b95b8-6559-4fb7-b32c-651451d6d0d2",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.messages[0].type }}",
+                    "rightValue": "image"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "3e7a07f9-b785-450c-8c68-f6b276838503",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.messages[0].type }}",
+                    "rightValue": "document"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Document"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f10112ab-6b69-4329-9d40-10b6ec6d43d8",
+      "name": "Route Types",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        608,
+        960
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "14e23243-cd44-4cb1-99bd-9e6905d511ad",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "text/csv"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "CSV"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "6d7616c5-6bdd-47b7-923e-639491d15a4e",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "text/html"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "HTML"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "a2174e02-378a-41ff-b269-61f4fc3f1de9",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "=mapped/calendar"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Calendar"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "f3b406d7-362d-473e-8edd-c3e5f2d9c44c",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "text/rtf"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "RTF"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "64dd4658-54e7-4453-adbc-7067dffcd555",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "text/plain"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "TXT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "7540a3ab-b48e-4bec-94e9-a5dfc3d65a4c",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "mapped/xml"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "XML"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "88b618fd-9a88-491e-91dd-c5fc9efa36e3",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "application/pdf"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "9c4d90aa-b4ea-4a63-b15e-666899c8360e",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "application/json"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "JSON"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "9baa7c88-3950-4099-8498-99a4640b95e7",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "application/vnd.ms-excel"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "XLS"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "b83e540c-ba1e-42d0-ac83-f675e25e6aea",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "XLSX"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "ea3be820-2ead-4ec2-b292-42d3c7804b55",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "leftValue": "={{ $json.mime_type }}",
+                    "rightValue": ""
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "ELSE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "24830df4-4b90-49d3-8d0a-23fa2bea19d4",
+      "name": "Route Document Types",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        1680,
+        1168
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "677680658761861",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "=The File type you provided is unsupported.",
+        "additionalFields": {}
+      },
+      "id": "ac1c5fdd-1311-4bd3-8471-a49327b25a4c",
+      "name": "Send Unsupported Response",
+      "type": "n8n-nodes-base.whatsApp",
+      "position": [
+        1968,
+        1968
+      ],
+      "webhookId": "017d267f-4897-4726-bf03-304ef10352bf",
+      "typeVersion": 1,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "tNl89IHlMtxUCamr",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "677680658761861",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "id": "a477f052-6d3e-41fe-a7cf-c420e6859e2d",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.whatsApp",
+      "position": [
+        3088,
+        992
+      ],
+      "webhookId": "23834751-5066-48ba-8e19-549680df2b27",
+      "typeVersion": 1,
+      "credentials": {
+        "whatsAppApi": {
+          "id": "tNl89IHlMtxUCamr",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Knowledge Base Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI1": {
+      "main": [
+        [
+          {
+            "node": "Map image prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map JSON": {
+      "main": [
+        [
+          {
+            "node": "Map document prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Types": {
+      "main": [
+        [
+          {
+            "node": "Map text prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gets WhatsApp Voicemail Source URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gets WhatsApp Image Source URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gets WhatsApp Document Source URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Knowledge Base Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "OpenAI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map text prompt": {
+      "main": [
+        [
+          {
+            "node": "Knowledge Base Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Chunker": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Document Section Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from PDF": {
+      "main": [
+        [
+          {
+            "node": "Map document prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from XLS": {
+      "main": [
+        [
+          {
+            "node": "Map JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map image prompt": {
+      "main": [
+        [
+          {
+            "node": "Knowledge Base Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Route Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Document": {
+      "main": [
+        [
+          {
+            "node": "Map file extensions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "MongoDB Vector Search",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from XLSX": {
+      "main": [
+        [
+          {
+            "node": "Map JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Knowledge Base Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Voicemail": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map document prompt": {
+      "main": [
+        [
+          {
+            "node": "Knowledge Base Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map file extensions": {
+      "main": [
+        [
+          {
+            "node": "Route Document Types",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Docs Importer": {
+      "main": [
+        [
+          {
+            "node": "MongoDB Vector Store Inserter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Knowledge Base Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Document Types": {
+      "main": [
+        [
+          {
+            "node": "Map document prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map document prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map document prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map document prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map document prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map document prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract from PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map JSON",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract from XLS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract from XLSX",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Unsupported Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MongoDB Vector Search": {
+      "ai_tool": [
+        [
+          {
+            "node": "Knowledge Base Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document Section Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "MongoDB Vector Store Inserter",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Embeddings Generator": {
+      "ai_embedding": [
+        [
+          {
+            "node": "MongoDB Vector Store Inserter",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets WhatsApp Image Source URL": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking \"Execute Workflow\"": {
+      "main": [
+        [
+          {
+            "node": "Google Docs Importer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets WhatsApp Document Source URL": {
+      "main": [
+        [
+          {
+            "node": "Download Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gets WhatsApp Voicemail Source URL": {
+      "main": [
+        [
+          {
+            "node": "Download Voicemail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "bf5d1c36-8775-47a5-ae43-6b181f6e56e3",
+  "meta": {
+    "instanceId": "2eedc652a56a902e49b500af956458cdadc9820844d48a8b76a7151859333074"
+  },
+  "nodeGroups": [],
+  "id": "hcvI1UI0CQxH06ui",
+  "tags": []
+}
